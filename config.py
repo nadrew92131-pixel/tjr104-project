@@ -8,7 +8,7 @@ SAVE_NEW_DATA_DIR = r"C:\TJR104_Project\CSV_New_Data"
 SAVE_NEW_DATA_PATH = os.path.join(SAVE_NEW_DATA_DIR)  # 最終壓縮檔路徑
 # 資料庫連線字串：帳號:密碼@伺服器位址:埠號/資料庫名稱
 DB_URL = "mysql+pymysql://root:nadrew8425@localhost:3306/TJR104_Project"
-
+GCP_DB_URL = "mysql+pymysql://root:123456@localhost:3307/test_db"
 # 模擬真人瀏覽器的標頭，避免被伺服器偵測為機器人而拒絕連線
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
@@ -47,52 +47,93 @@ COL_MAP = {
         "肇事逃逸類別名稱-是否肇逃": "hit_and_run", "經度": "longitude", "緯度": "latitude"
     }
 
-MAIN_COL = ['accident_id', 'accident_year', 'accident_month', 'accident_date', 'accident_time', 
-                 'death_count','injury_count','weather_condition',
-                 'party_sequence','longitude','latitude']
+MAIN_COL = ['accident_id','accident_category', 'accident_year', 'accident_month', 'accident_date', 'accident_hour', 
+            'accident_minute','accident_second','accident_datetime','death_count','injury_count',
+            'weather_condition','party_sequence','longitude','latitude']
     
-ENVIRONMENT_COL =['accident_id','road_type_primary_party','speed_limit_primary_party','road_form_major',
+ENVIRONMENT_COL =['accident_id','light_condition','road_type_primary_party','speed_limit_primary_party','road_form_major',
                   'road_form_minor','accident_position_major','accident_position_minor',
                   'road_surface_pavement','road_surface_condition','road_surface_defect',
                   'road_obstacle','sight_distance_quality','sight_distance','traffic_signal_type',
                   'traffic_signal_action','lane_divider_direction_major','lane_divider_direction_minor',
                   'lane_divider_main_general','lane_divider_fast_slow','lane_edge_marking']
 
+HUMAN_BEAHAVIOR_COL =['accident_id','gender',"age","protective_equipment","mobile_device_usage"
+                       ,"party_action_major","party_action_minor"]
+
+EVENT_PROCESS_PARTICIPATE_OBJECT_COL = ['accident_id','accident_type_major','accident_type_minor',
+                                    'cause_analysis_major_primary','cause_analysis_minor_primary',
+                                    'cause_analysis_major_individual','cause_analysis_minor_individual',
+                                    'vehicle_type_major','vehicle_type_minor']
+EVENT_RESULT_COL = ['accident_id','accident_category','impact_point_major_initial','impact_point_minor_initial',
+                'impact_point_major_other','impact_point_minor_other','hit_and_run']
+
 
 MAIN_TABLE_DICT = {
-    'accident_id': types.INTEGER,
+        'accident_id': types.VARCHAR(16),
+        'accident_category':types.VARCHAR(2),
         'accident_year': types.INTEGER, # 手動指定型別
         'accident_month': types.INTEGER,
-        'accident_date': types.Date,
-        'accident_time': types.Time,
+        'accident_date': types.INTEGER,
+        'accident_hour': types.INTEGER,
+        'accident_minute': types.INTEGER,
+        'accident_second': types.INTEGER,
+        'accident_datetime': types.DateTime(),
         'death_count':types.INTEGER,
         'injury_count':types.INTEGER,
-        'weather_condition':types.VARCHAR(1),
+        'weather_condition':types.VARCHAR(10),
         'party_sequence':types.INTEGER,
         'longitude':types.DECIMAL(10,6),
         'latitude':types.DECIMAL(10,6)
 }
 
-DETAIL_TABLE_DICT={
-    'accident_id': types.INTEGER,'accident_category':types.VARCHAR(2), 'police_department':types.VARCHAR(2), 
-        'accident_location':types.VARCHAR(100), 'light_condition':types.VARCHAR(20),
-        'road_type_primary_party':types.VARCHAR(10),'speed_limit_primary_party':types.SMALLINT,
-        'road_form_major':types.VARCHAR(10),'road_form_minor':types.VARCHAR(10),
-        'accident_position_major':types.VARCHAR(20),'accident_position_minor':types.VARCHAR(20),
-        'road_surface_pavement':types.VARCHAR(10),'road_surface_condition':types.VARCHAR(10),
-        'road_surface_defect':types.VARCHAR(10),'road_obstacle':types.VARCHAR(10),
-        'sight_distance_quality':types.VARCHAR(10),'sight_distance':types.VARCHAR(10),
-        'traffic_signal_type':types.VARCHAR(10),'traffic_signal_action':types.VARCHAR(10),
-        'lane_divider_direction_major':types.VARCHAR(20),'lane_divider_direction_minor':types.VARCHAR(20),
-        'lane_divider_main_general':types.VARCHAR(20),'lane_divider_fast_slow':types.VARCHAR(20),
-        'lane_edge_marking':types.BOOLEAN,'accident_type_major':types.VARCHAR(20),
-        'accident_type_minor':types.VARCHAR(20),'cause_analysis_major_primary':types.VARCHAR(20),
-        'cause_analysis_minor_primary':types.VARCHAR(120),'vehicle_type_major':types.VARCHAR(20),
-        'vehicle_type_minor':types.VARCHAR(20),'gender':types.VARCHAR(20),'age':types.SMALLINT,
-        'protective_equipment':types.VARCHAR(20),'mobile_device_usage':types.VARCHAR(20),
-        'party_action_major':types.VARCHAR(20),'party_action_minor':types.VARCHAR(20),
-        'impact_point_major_initial':types.VARCHAR(20),'impact_point_minor_initial':types.VARCHAR(20),
-        'impact_point_major_other':types.VARCHAR(20),'impact_point_minor_other':types.VARCHAR(20),
-        'cause_analysis_major_individual':types.VARCHAR(20),'cause_analysis_minor_individual':types.VARCHAR(100),
-        'hit_and_run':types.VARCHAR(2)
-}
+ENVIRONMENT_TABLE_DICT={'accident_id':types.VARCHAR(16),'light_condition':types.VARCHAR(20),
+                        'road_type_primary_party':types.VARCHAR(10),'speed_limit_primary_party':types.SMALLINT,
+                        'road_form_major':types.VARCHAR(10),'road_form_minor':types.VARCHAR(10),
+                  'accident_position_major':types.VARCHAR(20),'accident_position_minor':types.VARCHAR(20),
+                  'road_surface_pavement':types.VARCHAR(10),'road_surface_condition':types.VARCHAR(10),
+                  'road_surface_defect':types.VARCHAR(10),'road_obstacle':types.VARCHAR(10),
+                  'sight_distance_quality':types.VARCHAR(10),'sight_distance':types.VARCHAR(10),
+                  'traffic_signal_type':types.VARCHAR(50),'traffic_signal_action':types.VARCHAR(10),
+                  'lane_divider_direction_major':types.VARCHAR(20),'lane_divider_direction_minor':types.VARCHAR(20),
+                  'lane_divider_main_general':types.VARCHAR(20),'lane_divider_fast_slow':types.VARCHAR(20),
+                  'lane_edge_marking':types.BOOLEAN}
+
+HUMAN_BEAHAVIOR_DICT = {'accident_id': types.VARCHAR(16),'gender':types.VARCHAR(20),
+                       'age':types.SMALLINT,'protective_equipment':types.VARCHAR(50),
+                       'mobile_device_usage':types.VARCHAR(20),'party_action_major':types.VARCHAR(20),
+                       'party_action_minor':types.VARCHAR(20)}
+
+EVENT_PROCESS_PARTICIPATE_OBJECT_DICT= {'accident_id': types.VARCHAR(16),'accident_type_major':types.VARCHAR(20),
+                                        'accident_type_minor':types.VARCHAR(20),'cause_analysis_major_primary':types.VARCHAR(20),
+                                        'cause_analysis_minor_primary':types.VARCHAR(120),'cause_analysis_major_individual':types.VARCHAR(20),
+                                        'cause_analysis_minor_individual':types.VARCHAR(100),'vehicle_type_major':types.VARCHAR(20),
+                                        'vehicle_type_minor':types.VARCHAR(20)}
+
+EVENT_RESULT_DICT ={'accident_id': types.VARCHAR(16),'accident_category':types.VARCHAR(2),'impact_point_major_initial':types.VARCHAR(20),
+                    'impact_point_minor_initial':types.VARCHAR(20),'impact_point_major_other':types.VARCHAR(20),
+                    'impact_point_minor_other':types.VARCHAR(20),'hit_and_run':types.VARCHAR(2)}
+
+# DETAIL_TABLE_DICT={
+#     'accident_id': types.VARCHAR(16),'accident_category':types.VARCHAR(2), 'police_department':types.VARCHAR(2), 
+#         'accident_location':types.VARCHAR(100), 'light_condition':types.VARCHAR(20),
+#         'road_type_primary_party':types.VARCHAR(10),'speed_limit_primary_party':types.SMALLINT,
+#         'road_form_major':types.VARCHAR(10),'road_form_minor':types.VARCHAR(10),
+#         'accident_position_major':types.VARCHAR(20),'accident_position_minor':types.VARCHAR(20),
+#         'road_surface_pavement':types.VARCHAR(10),'road_surface_condition':types.VARCHAR(10),
+#         'road_surface_defect':types.VARCHAR(10),'road_obstacle':types.VARCHAR(10),
+#         'sight_distance_quality':types.VARCHAR(10),'sight_distance':types.VARCHAR(10),
+#         'traffic_signal_type':types.VARCHAR(10),'traffic_signal_action':types.VARCHAR(10),
+#         'lane_divider_direction_major':types.VARCHAR(20),'lane_divider_direction_minor':types.VARCHAR(20),
+#         'lane_divider_main_general':types.VARCHAR(20),'lane_divider_fast_slow':types.VARCHAR(20),
+#         'lane_edge_marking':types.BOOLEAN,'accident_type_major':types.VARCHAR(20),
+#         'accident_type_minor':types.VARCHAR(20),'cause_analysis_major_primary':types.VARCHAR(20),
+#         'cause_analysis_minor_primary':types.VARCHAR(120),'vehicle_type_major':types.VARCHAR(20),
+#         'vehicle_type_minor':types.VARCHAR(20),'gender':types.VARCHAR(20),'age':types.SMALLINT,
+#         'protective_equipment':types.VARCHAR(20),'mobile_device_usage':types.VARCHAR(20),
+#         'party_action_major':types.VARCHAR(20),'party_action_minor':types.VARCHAR(20),
+#         'impact_point_major_initial':types.VARCHAR(20),'impact_point_minor_initial':types.VARCHAR(20),
+#         'impact_point_major_other':types.VARCHAR(20),'impact_point_minor_other':types.VARCHAR(20),
+#         'cause_analysis_major_individual':types.VARCHAR(20),'cause_analysis_minor_individual':types.VARCHAR(100),
+#         'hit_and_run':types.VARCHAR(2)
+# }
