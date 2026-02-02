@@ -36,7 +36,7 @@ def car_crash_old_data_clean(df_year_list):
         return hashlib.sha256(input_data.encode('utf-8')).hexdigest()[:16]
     
     for df in df_year_list:
-        
+        df = df[~df['accident_year'].astype(str).str.contains('資料提供日期|事故類別', na=False)]
         if 'accident_id' not in df.columns:
          # Pandas 會自動把每一列塞進 create_hash 的第一個位置
             df.insert(0, 'accident_id', df.apply(create_hash, axis=1))
@@ -59,25 +59,28 @@ def car_crash_old_data_clean(df_year_list):
         if 'accident_time' in df.columns:
             df['accident_time'] = df['accident_time'].astype(str).str.replace(r'\.0', '', regex=True).str.zfill(6)
             #zfill(6)從左側補滿6瑪'0', ex:'142'=>'000142'                       #'\.0', '' ==>把字串中的".0"替換成空字串 
-            if 'accident_hour' not in df.columns:
-                register=df['accident_time']#暫存在register省效能
-                df.insert(4,'accident_hour',register.astype(str).str[0:2])
-                df.insert(5,'accident_minute',register.astype(str).str[2:4])
-                df.insert(6,'accident_second',register.astype(str).str[4:6])
-                df=df.drop(columns=['accident_time'])
+            
+        register=df['accident_time']#暫存在register省效能
+        hour = register.str[0:2]
+        minute = register.str[2:4]
+        second = register.str[4:6]
         
-            if 'accident_datetime' not in df.columns:  
-                temp_dt = pd.to_datetime({
-                #pd.to_datetime不用寫insert也會自己插入表格
-                        'year': df['accident_year'],
-                        'month': df['accident_month'],
-                        'day': df['accident_date'],
-                        'hour': df['accident_hour'],
-                        'minute': df['accident_minute'],
-                        'second': df['accident_second']
-                        }, errors='coerce')
-                df.insert(7, 'accident_datetime',temp_dt)
-        
+        if 'accident_datetime' not in df.columns:  
+            temp_dt = pd.to_datetime({
+            #pd.to_datetime不用寫insert也會自己插入表格
+                'year': df['accident_year'],
+                'month': df['accident_month'],
+                'day': df['accident_date'],
+                'hour': hour,
+                'minute': minute,
+                'second': second
+                }, errors='coerce')
+            df.insert(2, 'accident_datetime',temp_dt)
+            df.insert(3, 'accident_weekday',temp_dt.dt.dayofweek)
+            cols_to_remove = ['accident_time', 'accident_year', 'accident_month', 'accident_date']
+            df = df.drop(columns=cols_to_remove)
+            
+            
         if 'weather_condition' in df.columns:
             df['weather_condition'] = df['weather_condition'].astype(str).str.slice(0, 10)
         
@@ -86,7 +89,7 @@ def car_crash_old_data_clean(df_year_list):
             #把只含df['party_sequence']==1 的條件存到df_primary這個新的dataframe
             primary_data_list.append(df_primary)
             df_other = df[df['party_sequence']!=1].copy()
-            df_other = df_other[~df_other['accident_year'].astype(str).str.contains('資料提供日期|事故類別', na=False)]
+            #df_other = df_other[~df_other['accident_year'].astype(str).str.contains('資料提供日期|事故類別', na=False)]
             all_parties_list.append(df_other)
             
             
@@ -95,23 +98,25 @@ def car_crash_old_data_clean(df_year_list):
             return pd.DataFrame(), pd.DataFrame()
         
 
-    final_main_df = pd.concat(primary_data_list, ignore_index=True).drop_duplicates(subset=['accident_id'], keep='first')
-    final_all_party_df=pd.concat(all_parties_list, ignore_index=True).drop_duplicates(subset=['accident_id','party_sequence'], keep='first')
+    # final_main_df = pd.concat(primary_data_list, ignore_index=True).drop_duplicates(subset=['accident_id'], keep='first')
+    final_main_df = pd.concat(primary_data_list, ignore_index=True).drop_duplicates()
+    #final_all_party_df=pd.concat(all_parties_list, ignore_index=True).drop_duplicates(subset=['accident_id','party_sequence'], keep='first')
+    final_all_party_df=pd.concat(all_parties_list, ignore_index=True).drop_duplicates()
 
     return {
     "main": {
-        "master": final_main_df[MC],
-        "env": final_main_df[EC],
-        "human": final_main_df[HBC],
-        "process": final_main_df[EPPOC],
-        "result": final_main_df[ERC]
+        "master": final_main_df[MC]
+       # "env": final_main_df[EC],
+        # "human": final_main_df[HBC],
+        # "process": final_main_df[EPPOC],
+        # "result": final_main_df[ERC]
     },
     "party": {
-        "master": final_all_party_df[MC],
-        "env": final_all_party_df[EC],
-        "human": final_all_party_df[HBC],
-        "process": final_all_party_df[EPPOC],
-        "result": final_all_party_df[ERC]
+        "master": final_all_party_df[MC]
+        # "env": final_all_party_df[EC],
+        # "human": final_all_party_df[HBC],
+        # "process": final_all_party_df[EPPOC],
+        # "result": final_all_party_df[ERC]
     }
 }
         

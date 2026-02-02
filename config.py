@@ -9,6 +9,7 @@ SAVE_NEW_DATA_PATH = os.path.join(SAVE_NEW_DATA_DIR)  # 最終壓縮檔路徑
 # 資料庫連線字串：帳號:密碼@伺服器位址:埠號/資料庫名稱
 DB_URL = "mysql+pymysql://root:nadrew8425@localhost:3306/TJR104_Project"
 GCP_DB_URL = "mysql+pymysql://root:123456@localhost:3307/test_db"
+MY_IMPORT_TRY= "mysql+pymysql://root:Nadrew-8425@35.221.219.226:3306/test"
 # 模擬真人瀏覽器的標頭，避免被伺服器偵測為機器人而拒絕連線
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0',
@@ -47,9 +48,8 @@ COL_MAP = {
         "肇事逃逸類別名稱-是否肇逃": "hit_and_run", "經度": "longitude", "緯度": "latitude"
     }
 
-MAIN_COL = ['accident_id','accident_category', 'accident_year', 'accident_month', 'accident_date', 'accident_hour', 
-            'accident_minute','accident_second','accident_datetime','death_count','injury_count',
-            'weather_condition','party_sequence','longitude','latitude']
+MAIN_COL = ['accident_id','accident_category', 'accident_datetime', 'accident_weekday',
+           'death_count','injury_count','weather_condition','party_sequence','longitude','latitude']
     
 ENVIRONMENT_COL =['accident_id','light_condition','road_type_primary_party','speed_limit_primary_party','road_form_major',
                   'road_form_minor','accident_position_major','accident_position_minor',
@@ -72,13 +72,8 @@ EVENT_RESULT_COL = ['accident_id','accident_category','impact_point_major_initia
 MAIN_TABLE_DICT = {
         'accident_id': types.VARCHAR(16),
         'accident_category':types.VARCHAR(2),
-        'accident_year': types.INTEGER, # 手動指定型別
-        'accident_month': types.INTEGER,
-        'accident_date': types.INTEGER,
-        'accident_hour': types.INTEGER,
-        'accident_minute': types.INTEGER,
-        'accident_second': types.INTEGER,
         'accident_datetime': types.DateTime(),
+        'accident_weekday':types.Integer(),
         'death_count':types.INTEGER,
         'injury_count':types.INTEGER,
         'weather_condition':types.VARCHAR(10),
