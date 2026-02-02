@@ -5,6 +5,7 @@ import pymysql  # 代碼中沒直接用到它的 method，但它是底層驅動
 import pandas as pd  # 負責：資料處理，把 CSV 轉成表格，進行切分與清洗
 from config import (DB_URL,
                     GCP_DB_URL,
+                    MY_IMPORT_TRY,
                     MAIN_TABLE_DICT as MTD,
                     ENVIRONMENT_TABLE_DICT as ETD,
                     HUMAN_BEAHAVIOR_DICT as HBD,
@@ -19,16 +20,16 @@ def load_to_mysql(main_dict, party_dict):
     try:
         # 寫入主表
         main_dict['master'].to_sql('accident_sq1_main', con=engine, if_exists='append', index=False,dtype= MTD)
-        main_dict['env'].to_sql('accident_sq1_env', con=engine, if_exists='append', index=False,dtype= ETD)
-        main_dict['human'].to_sql('accident_sq1_human', con=engine, if_exists='append', index=False,dtype= HBD)
-        main_dict['process'].to_sql('accident_sq1_process', con=engine, if_exists='append', index=False,dtype= EPPOD)
-        main_dict['result'].to_sql('accident_sq1_res', con=engine, if_exists='append', index=False,dtype= ERD)
+        # main_dict['env'].to_sql('accident_sq1_env', con=engine, if_exists='append', index=False,dtype= ETD)
+        # main_dict['human'].to_sql('accident_sq1_human', con=engine, if_exists='append', index=False,dtype= HBD)
+        # main_dict['process'].to_sql('accident_sq1_process', con=engine, if_exists='append', index=False,dtype= EPPOD)
+        # main_dict['result'].to_sql('accident_sq1_res', con=engine, if_exists='append', index=False,dtype= ERD)
         # 寫入細節表
         party_dict['master'].to_sql('accident_sq2_sub', con=engine, if_exists='append', index=False,dtype= MTD)
-        party_dict['env'].to_sql('accident_sq2_env', con=engine, if_exists='append', index=False,dtype= ETD)
-        party_dict['human'].to_sql('accident_sq2_human', con=engine, if_exists='append', index=False,dtype= HBD)
-        party_dict['process'].to_sql('accident_sq2_process', con=engine, if_exists='append', index=False,dtype= EPPOD)
-        party_dict['result'].to_sql('accident_sq2_res', con=engine, if_exists='append', index=False,dtype= ERD)
+        # party_dict['env'].to_sql('accident_sq2_env', con=engine, if_exists='append', index=False,dtype= ETD)
+        # party_dict['human'].to_sql('accident_sq2_human', con=engine, if_exists='append', index=False,dtype= HBD)
+        # party_dict['process'].to_sql('accident_sq2_process', con=engine, if_exists='append', index=False,dtype= EPPOD)
+        # party_dict['result'].to_sql('accident_sq2_res', con=engine, if_exists='append', index=False,dtype= ERD)
         print("所有資料已成功寫入資料庫！")
         return engine
     except Exception as e:
@@ -81,24 +82,28 @@ def setting_pkfk(engine):
 # ------------------------------------------------------------------
 def load_to_GCP_mysql(main_dict, party_dict):
     print(f"--- 階段三：匯入 gcp MySQL ---")
-    engine = create_engine(GCP_DB_URL)
+    engine = create_engine(GCP_DB_URL,pool_pre_ping=True,  # 核心：確保連線有效
+                           pool_recycle=300,                # 每 5 分鐘強制重整連線
+                           connect_args={'connect_timeout': 60})
     
         # 寫入主表
     try:
-        main_dict['master'].to_sql('accident_sq1_main', con=engine, if_exists='append', index=False,dtype= MTD,chunksize=500)
-        main_dict['env'].to_sql('accident_sq1_env', con=engine, if_exists='append', index=False,dtype= ETD,chunksize=500)
-        main_dict['human'].to_sql('accident_sq1_human', con=engine, if_exists='append', index=False,dtype= HBD,chunksize=500)
-        main_dict['process'].to_sql('accident_sq1_process', con=engine, if_exists='append', index=False,dtype= EPPOD,chunksize=500)
-        main_dict['result'].to_sql('accident_sq1_res', con=engine, if_exists='append', index=False,dtype= ERD,chunksize=500)
+        with engine.begin() as connection:
+        # 使用 Transaction 確保資料完整性
+            main_dict['master'].to_sql('accident_main', con=connection, if_exists='append', index=False,dtype= MTD,chunksize=200)
+            # main_dict['env'].to_sql('accident_sq1_env', con=connection, if_exists='append', index=False,dtype= ETD,chunksize=200)
+            # main_dict['human'].to_sql('accident_sq1_human', con=connection, if_exists='append', index=False,dtype= HBD,chunksize=200)
+            # main_dict['process'].to_sql('accident_sq1_process', con=connection, if_exists='append', index=False,dtype= EPPOD,chunksize=200)
+            # main_dict['result'].to_sql('accident_sq1_res', con=connection, if_exists='append', index=False,dtype= ERD,chunksize=200)
 
-            # 寫入細節表
+                # 寫入細節表
 
-        party_dict['master'].to_sql('accident_sq2_sub', con=engine, if_exists='append', index=False,dtype= MTD,chunksize=500)
-        party_dict['env'].to_sql('accident_sq2_env', con=engine, if_exists='append', index=False,dtype= ETD,chunksize=500)
-        party_dict['human'].to_sql('accident_sq2_human', con=engine, if_exists='append', index=False,dtype= HBD,chunksize=500)
-        party_dict['process'].to_sql('accident_sq2_process', con=engine, if_exists='append', index=False,dtype= EPPOD,chunksize=500)
-        party_dict['result'].to_sql('accident_sq2_res', con=engine, if_exists='append', index=False,dtype= ERD,chunksize=500)
-        #要加chunksize=500,不然上傳雲端會卡住(一次上傳500列資料)
+            party_dict['master'].to_sql('accident_sub', con=connection, if_exists='append', index=False,dtype= MTD,chunksize=200)
+            # party_dict['env'].to_sql('accident_sq2_env', con=connection, if_exists='append', index=False,dtype= ETD,chunksize=200)
+            # party_dict['human'].to_sql('accident_sq2_human', con=connection, if_exists='append', index=False,dtype= HBD,chunksize=200)
+            # party_dict['process'].to_sql('accident_sq2_process', con=connection, if_exists='append', index=False,dtype= EPPOD,chunksize=200)
+            # party_dict['result'].to_sql('accident_sq2_res', con=connection, if_exists='append', index=False,dtype= ERD,chunksize=200)
+            #要加chunksize=500,不然上傳雲端會卡住(一次上傳500列資料)
         print("所有資料已成功寫入資料庫！")
         
         return engine
