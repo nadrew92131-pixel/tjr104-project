@@ -1,7 +1,8 @@
 import pandas as pd
+import numpy as np
 import hashlib
-from config import (COL_MAP
-                    ,MAIN_COL as MC,
+from config import (COL_MAP,
+                    MAIN_COL as MC,
                     ENVIRONMENT_COL as EC,
                     HUMAN_BEAHAVIOR_COL as HBC,
                     EVENT_PROCESS_PARTICIPATE_OBJECT_COL as EPPOC,
@@ -27,20 +28,35 @@ def transform_data_dict(df_year_list)->list:
 def car_crash_old_data_clean(df_year_list):
     primary_data_list = []
     all_parties_list = []
-    def create_hash(row):
-        input_data = (
-            f"{row['accident_year']}|{row['accident_month']}|{row['accident_date']}|"
-            f"{row['accident_time']}|{row['speed_limit_primary_party']}|{row['accident_type_minor']}|"
-            f"{row['casualties_count']}|{row['longitude']}|{row['latitude']}"
-            )
-        return hashlib.sha256(input_data.encode('utf-8')).hexdigest()[:16]
+    cnt=0
+    # def create_hash(row):
+    #     input_data = (
+    #         f"{row['accident_year']}|{row['accident_month']}|{row['accident_date']}|"
+    #         f"{row['accident_time']}|{row['speed_limit_primary_party']}|{row['accident_type_minor']}|"
+    #         f"{row['casualties_count']}|{row['longitude']}|{row['latitude']}"
+    #         )
+    #     return hashlib.sha256(input_data.encode('utf-8')).hexdigest()[:16]
     
     for df in df_year_list:
-        df = df[~df['accident_year'].astype(str).str.contains('資料提供日期|事故類別', na=False)]
+        cnt+=1
+        # if 'accident_id' not in df.columns:
+        #  # Pandas 會自動把每一列塞進 create_hash 的第一個位置
+        #     df.insert(0, 'accident_id', df.apply(create_hash, axis=1))
+        #     #df.insert(loc, column, value)：
         if 'accident_id' not in df.columns:
-         # Pandas 會自動把每一列塞進 create_hash 的第一個位置
-            df.insert(0, 'accident_id', df.apply(create_hash, axis=1))
-            #df.insert(loc, column, value)：
+            sort_cols = ['accident_year', 'accident_month', 'accident_date', 'accident_time', 'longitude', 'latitude', 'party_sequence']
+            df = df.sort_values(by=sort_cols).reset_index(drop=True)
+        # 1. 生成當前檔案的局部流水號 (1, 2, 3...)
+            local_id = (df['party_sequence'] == 1).cumsum()
+        # 2. 取得年份 (確保是整數，避免出現 2021.0)
+            year_val = int(float(df['accident_year'].iloc[0]))
+            month_val = int(float(df['accident_month'].iloc[0])) 
+        # 3. 組合：年份 + 6位補零流水號 (例如: 2021000001)
+            df['accident_id'] = local_id.apply(lambda x: f"{year_val}{month_val:02d}{cnt:02d}{x:06d}")
+
+        invalid_gender = ~df["gender"].isin(["男", "女"])
+        df.loc[invalid_gender, ["gender", "age"]] = np.nan
+        df = df[~df['accident_year'].astype(str).str.contains('資料提供日期|事故類別', na=False)]
         if 'casualties_count' in df.columns:    
         # 直接找「數字」後面跟著「死」或「傷」的組合
             df['death_count'] = df['casualties_count'].str.extract(r'死亡(\d+)').fillna(0).infer_objects(copy=False).astype(int)
@@ -98,7 +114,7 @@ def car_crash_old_data_clean(df_year_list):
             return pd.DataFrame(), pd.DataFrame()
         
 
-    # final_main_df = pd.concat(primary_data_list, ignore_index=True).drop_duplicates(subset=['accident_id'], keep='first')
+    #final_main_df = pd.concat(primary_data_list, ignore_index=True).drop_duplicates(subset=['accident_id'], keep='first')
     final_main_df = pd.concat(primary_data_list, ignore_index=True).drop_duplicates()
     #final_all_party_df=pd.concat(all_parties_list, ignore_index=True).drop_duplicates(subset=['accident_id','party_sequence'], keep='first')
     final_all_party_df=pd.concat(all_parties_list, ignore_index=True).drop_duplicates()
